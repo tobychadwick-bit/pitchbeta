@@ -65,7 +65,6 @@
 
   /* Mixed Test */
   #mixedTestScreen .note{min-height:58px}
-
   /* Tutorial pager */
   .tPage{display:none}
   .tPage.active{display:block}
@@ -178,7 +177,10 @@
       <h3>📈 Progress</h3>
       <div id="progressControls">
         <label for="dataSelect">Data:</label>
-        <select id="dataSelect" style="padding-right:28px"><option value="TRAINING" selected>Training</option><option value="TEST">Test</option></select>
+        <select id="dataSelect" style="padding-right:28px">
+          <option value="TRAINING" selected>Training</option>
+          <option value="TEST">Test</option>
+        </select>
         <label for="pitchSelect">Pitch:</label>
         <select id="pitchSelect" style="padding-right:28px"></select>
         <label for="granularitySelect">View:</label>
@@ -242,31 +244,29 @@
     <p style="opacity:.75;margin-top:8px">800 ms tone • RT limit adapts with set size • 24 blocks per set • Octaves randomized (C4–B6)</p>
   </div>
 
-
-  <!-- Mixed Test (menu page) -->
-  <div class="card screen" id="mixedTestScreen" style="display:none">
+  
+  <!-- Mixed Test (self-assessment) -->
+  <div class="card screen" id="mixedTestScreen">
     <h2>🧪 Mixed Tone Self‑Test</h2>
-    <p id="mixedIntro" style="opacity:.9">
-      This self‑assessment mixes <strong>sine waves</strong> and your <strong>piano samples</strong>.
-      You’ll hear 20 tones (no feedback), and you guess the pitch from <em>all 12 notes</em>.
-      Use it at the <strong>start and end of your 8‑week plan</strong>, or add a point weekly to track progress.
+    <p style="opacity:.9">
+      This mixes <strong>sine waves</strong> and your <strong>piano samples</strong>. You’ll hear 20 tones (no feedback),
+      and you guess the pitch from <strong>all 12 notes</strong>. Use it at the <strong>start and end of your 8‑week plan</strong>,
+      or weekly to track progress. The tracker adds one point per completed test.
     </p>
     <div class="row" style="margin-bottom:8px">
       <span class="pill" id="mixedStatus">Ready — 20 trials</span>
     </div>
-    <div class="row" id="mixedControls">
+    <div class="row">
       <button id="mixedStart">▶ Start Test</button>
       <button id="mixedBack">↩ Menu</button>
     </div>
     <div class="note-pad" id="mixedPad" style="margin-top:8px"></div>
   </div>
 
-
-
   <!-- New pitch modal after passing a set -->
   <div id="pitchAddModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:1001;background:rgba(0,0,0,.55)">
     <div class="card" style="max-width:520px;text-align:center">
-      <h3 id="pitchAddTitle">🎉 Well done!</h3>
+      <h3>🎉 Well done!</h3>
       <p id="pitchAddText" style="opacity:.9;margin:8px 0 12px"></p>
       <div class="row" style="justify-content:center">
         <button id="pitchAddHear">🔊 Hear it</button>
@@ -786,26 +786,12 @@ function recordTrial(guessLabel, ok, timeout=false, oobChosen=false){
     try{
       const set=setFromIndex(state.levelIndex);
       const t=(state.trials||[]).filter(tr=> tr.set===set && tr.block>=21 && tr.block<=24);
-      const ok=t.filter(tr=>tr.correct).length, n=t.length||1;
-      const pct=Math.round((ok/n)*1000)/10;
+      const ok2=t.filter(tr=>tr.correct).length, n2=t.length||1;
+      const pct2=Math.round((ok2/n2)*1000)/10;
       const need=Math.round(THRESH_24[23]*1000)/10;
-      const passed=(ok/n)>=THRESH_24[23];
-      alert(passed ? `🎉 Congrats — you passed Set ${set} tests with ${pct}% (req ${need}%).`
-                    : `😬 Not quite — you got ${pct}% (req ${need}%).`);
-    }catch(_){}
-  }
-
-  /* End-of-set summary for test blocks (21–24) */
-  if(block===24 && state.levelTrials===20){
-    try{
-      const set=setFromIndex(state.levelIndex);
-      const t=(state.trials||[]).filter(tr=> tr.set===set && tr.block>=21 && tr.block<=24);
-      const ok=t.filter(tr=>tr.correct).length, n=t.length||1;
-      const pct=Math.round((ok/n)*1000)/10;
-      const need=Math.round(THRESH_24[23]*1000)/10;
-      const passed=(ok/n)>=THRESH_24[23];
-      alert(passed ? `🎉 Congrats — you passed Set ${set} tests with ${pct}% (req ${need}%).`
-                    : `😬 Not quite — you got ${pct}% (req ${need}%).`);
+      const passed2=(ok2/n2)>=THRESH_24[23];
+      alert(passed2 ? `🎉 Congrats — you passed Set ${set} tests with ${pct2}% (req ${need}%).`
+                    : `😬 Not quite — you got ${pct2}% (req ${need}%).`);
     }catch(_){}
   }
 }
@@ -844,19 +830,14 @@ function advanceCheck(){
   state.levelTrials=0; state.levelCorrect=0;
   if(passed && state.levelIndex<LEVELS_TOTAL){
     state.levelIndex++;
+    const wasBlock24=(blockFromIndex(prevLevelIdx)===24);
+    if(wasBlock24){
+      const nextSet=setFromIndex(state.levelIndex);
+      const newPc=UNLOCK_ORDER[nextSet-1];
+      try{ showPitchAddModal(newPc); }catch(_){}
+    }
     save(); updateLevelUI(); paintNotes();
-    
-    try{
-      const prevBlock = blockFromIndex(state.levelIndex-1);
-      const prevSet = setFromIndex(state.levelIndex-1);
-      const willAddPitch = (prevBlock===24);
-      const nextSet = willAddPitch ? (prevSet+1) : prevSet;
-      if(willAddPitch && nextSet<=UNLOCK_ORDER.length){
-        const newPc = UNLOCK_ORDER[nextSet-1];
-        showPitchAddModal(newPc);
-      }
-    }catch(_){};
-startFlappyReward();
+    startFlappyReward();
   } else save();
 }
 
@@ -867,9 +848,8 @@ function showPitchAddModal(pc){
   t.textContent = `Well done — now you are adding ${pcLabel(pc)}. Press “Hear it” to preview this pitch before you start.`;
   m.style.display='flex';
   safe('pitchAddHear', btn=> btn.onclick=()=> playSample(`${pc}${rand(currentOctaves())}`));
-  safe('pitchAddClose', btn=> btn.onclick=()=> hide('pitchAddModal'));
+  safe('pitchAddClose', btn=> btn.onclick=()=> (m.style.display='none'));
 }
-
 /* ------------------ SESSION ------------------ */
 function startSession(){
   stopAllTimers();
@@ -973,6 +953,7 @@ function thisWeekBins(pitch){
 function drawLine(ctx, pts, color, xscale, yscale){ ctx.beginPath(); let started=false; for(const p of pts){ if(p.y===null) continue; const x=xscale(p.x), y=yscale(p.y); if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y); } if(!started) return; ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.stroke(); }
 function drawDot(ctx, x, y, color, r=6){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=color; ctx.fill(); }
 function drawChart(){
+  const dataMode = byId('dataSelect')?.value || 'TRAINING';
   const canvas = byId('progressCanvas'); if(!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
@@ -980,8 +961,6 @@ function drawChart(){
   const P={l:56,r:24,t:16,b:28}; const AX=P.l, AY=P.t, AW=W-P.l-P.r, AH=H-P.t-P.b;
   ctx.fillStyle='#0b1224'; ctx.fillRect(0,0,W,H);
   const mode=byId('granularitySelect')?.value||'WEEKLY';
-  const dataMode=byId('dataSelect')?.value||'TRAINING';
-  const dataMode=byId('dataSelect')?.value||'TRAINING';
   const pitch=byId('pitchSelect')?.value||'OVERALL';
   const colGood=getComputedStyle(document.documentElement).getPropertyValue('--good')||'#16a34a';
   const colNeutral=getComputedStyle(document.documentElement).getPropertyValue('--neutral')||'#94a3b8';
@@ -990,56 +969,26 @@ function drawChart(){
   /* Y grid + labels */
   ctx.strokeStyle='#20314d'; ctx.lineWidth=1; ctx.beginPath();
   for(let gy=0; gy<=100; gy+=20){ const y=yscale(gy); ctx.moveTo(AX,y); ctx.lineTo(AX+AW,y);} ctx.stroke();
-  // If TEST mode, plot mixedTests as #1..#N points and exit
-  if(dataMode==='TEST'){
-    const tests=(state.mixedTests||[]);
-    const n = Math.max(1, tests.length);
-    const xscale=(i)=> AX + (n>1? ((i-1)/(n-1))*AW : AW/2 + AX);
-    // X grid & labels
-    ctx.strokeStyle='#20314d'; ctx.lineWidth=1; ctx.beginPath();
-    if(n>1){ for(let i=1;i<=n;i++){ const x=xscale(i); ctx.moveTo(x,AY); ctx.lineTo(x,AY+AH);} ctx.stroke(); }
-    ctx.fillStyle='rgba(229,231,235,0.9)';
-    for(let i=1;i<=tests.length;i++){ ctx.fillText('#'+i, xscale(i)-8, H-6); }
-    // line + points
-    const colGood=getComputedStyle(document.documentElement).getPropertyValue('--good')||'#16a34a';
-    let started=false; ctx.beginPath();
-    tests.forEach((t,i)=>{
-      const pct = Math.round((t.ok/t.n)*1000)/10;
-      const x = xscale(i+1); const y= yscale(pct);
-      if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
-    });
-    if(started){ ctx.strokeStyle=colGood; ctx.lineWidth=2.5; ctx.stroke(); }
-    tests.forEach((t,i)=>{
-      const pct = Math.round((t.ok/t.n)*1000)/10;
-      const x = xscale(i+1); const y= yscale(pct);
-      ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fillStyle=colGood; ctx.fill();
-    });
-    ctx.fillStyle='rgba(229,231,235,0.85)'; ctx.font='13px system-ui,sans-serif';
-    ctx.fillText('Test (Mixed: sine+piano)', AX, AY-2);
-    return;
-  }
-
-  // If TEST mode, plot mixedTests as #1..#N points and exit
-  if(dataMode==='TEST'){
-    const tests=(state.mixedTests||[]);
-    const n = Math.max(1, tests.length);
-    const xscale=(i)=> AX + (n>1? ((i-1)/(n-1))*AW : AW/2 + AX);
-    // X grid & labels
-    ctx.strokeStyle='#20314d'; ctx.lineWidth=1; ctx.beginPath();
-    for(let i=1;i<=n;i++){ const x=xscale(i); ctx.moveTo(x,AY); ctx.lineTo(x,AY+AH);} ctx.stroke();
-    ctx.fillStyle='rgba(229,231,235,0.9)'; ctx.font='12px system-ui,sans-serif';
-    for(let i=1;i<=tests.length;i++){ ctx.fillText('#'+i, xscale(i)-8, H-6); }
-    // Line + points
-    const colGood=getComputedStyle(document.documentElement).getPropertyValue('--good')||'#16a34a';
-    ctx.beginPath(); let started=false;
-    tests.forEach((t,i)=>{ const pct=Math.round((t.ok/t.n)*1000)/10; const x=xscale(i+1), y=yscale(pct); if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y); });
-    if(started){ ctx.strokeStyle=colGood; ctx.lineWidth=2.5; ctx.stroke(); }
-    tests.forEach((t,i)=>{ const pct=Math.round((t.ok/t.n)*1000)/10; const x=xscale(i+1), y=yscale(pct); ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fillStyle=colGood; ctx.fill(); });
-    ctx.fillStyle='rgba(229,231,235,0.85)'; ctx.font='13px system-ui,sans-serif'; ctx.fillText('Test (20‑trial runs)', AX, AY-2);
-    return;
-  }
   ctx.fillStyle='rgba(229,231,235,0.9)'; ctx.font='12px system-ui,sans-serif';
   for(let gy=0; gy<=100; gy+=20){ const y=yscale(gy)+4; ctx.fillText(String(gy)+'%', 8, y); }
+
+  /* TEST data */
+  if(dataMode==='TEST'){
+    const tests=(state.mixedTests||[]);
+    const n = tests.length;
+    const xscale=(i)=> AX + (n>1? ((i-1)/(n-1))*AW : AW/2 + AX);
+    ctx.strokeStyle='#20314d'; ctx.beginPath();
+    for(let i=1;i<=Math.max(1,n);i++){ const x=xscale(i); ctx.moveTo(x,AY); ctx.lineTo(x,AY+AH);} ctx.stroke();
+    ctx.fillStyle='rgba(229,231,235,0.9)'; for(let i=1;i<=n;i++){ ctx.fillText('#'+i, xscale(i)-8, H-6); }
+    const pts=tests.map((t,i)=> ({x:i+1, y: Math.round((t.ok/t.n)*1000)/10 }));
+    const colGood=getComputedStyle(document.documentElement).getPropertyValue('--good')||'#16a34a';
+    const accPts=pts;
+    drawLine(ctx, accPts, colGood, xscale, y=> AY + AH - (y/100)*AH);
+    for(const p of pts){ drawDot(ctx, xscale(p.x), yscale(p.y), colGood, 6); }
+    ctx.fillStyle='rgba(229,231,235,0.85)'; ctx.font='13px system-ui,sans-serif';
+    ctx.fillText('Mixed Test', AX, AY-2);
+    return;
+  }
 
   if(mode==='WEEKLY'){
     const bins=thisWeekBins(pitch);
@@ -1083,8 +1032,6 @@ function populatePitchSelect(){
   sel.appendChild(mk('OVERALL','Overall'));
   PC.forEach(pc=> sel.appendChild(mk(pc, pcLabel(pc))));
   sel.onchange = ()=> drawChart();
-  const dataSel = byId('dataSelect'); if(dataSel){ dataSel.onchange = ()=> drawChart(); }
-  const dataSel = byId('dataSelect'); if(dataSel){ dataSel.onchange = ()=> drawChart(); }
   const gran = byId('granularitySelect'); if(gran){ gran.onchange = ()=> drawChart(); gran.value='WEEKLY'; }
 }
 
@@ -1121,9 +1068,6 @@ function wireOnce(){
   safe('playFlappy',  el=> el.onclick=()=> openFlappyFromMenu());
   safe('resetLockout',el=> el.onclick=()=>{
     if(!confirm('Reset lockout/timer now? This starts a fresh 20-minute window immediately.')) return;
-  safe('menuMixedTest', el=> el.onclick=()=>{ showScreen('mixedTestScreen'); buildMixedPad(); });
-  safe('mixedBack', el=> el.onclick=()=>{ showScreen('menuScreen'); });
-  safe('mixedStart', el=> el.onclick=()=> startMixedTest());
     state.lockoutUntil = null; state.capResetAt = Date.now(); state.lastSeen = Date.now();
     save(); updateCapsUI(); alert('Timer reset. You can start training now.');
   });
@@ -1172,6 +1116,7 @@ function wireOnce(){
   safe('btnStrictMenu',   el=> el.onclick=()=>{ closeStrictModal(); showScreen('menuScreen'); });
 
   // Initial screen
+  safe('dataSelect', el=> el.onchange=()=> drawChart());
   if(!state.userName){ showScreen('startScreen'); }
   else { safe('greeting', g=> g.textContent=`Hello ${state.userName}!`); showScreen('menuScreen'); updateCapsUI(); }
 }
@@ -1182,7 +1127,6 @@ let mRunning=false, mDone=0, mCorrect=0, mTruePc=null, mNote=null, mIsSine=false
 function buildMixedPad(){
   const pad=byId('mixedPad'); if(!pad) return;
   pad.innerHTML='';
-  // All 12 pitches for self‑assessment
   const sorted = PC.slice();
   for(const pc of sorted){
     const b=document.createElement('button');
@@ -1200,25 +1144,26 @@ function startMixedTest(){
   text('mixedStatus','Playing…');
   nextMixedTrial(true);
 }
-function nextMixedTrial(forceNew=false){
+function nextMixedTrial(){
   if(!mRunning) return;
   try{
-    // choose any pitch-class and random octave from existing set of octaves
     mTruePc = rand(PC);
     const oct = rand(currentOctaves());
     mIsSine = Math.random()<0.5;
     mNote = `${mTruePc}${oct}`;
     if(mIsSine){
       (async ()=>{
-        await resumeCtx();
-        const ctx=getCtx();
-        const idx={C:0,Db:1,D:2,Eb:3,E:4,F:5,Gb:6,G:7,Ab:8,A:9,Bb:10,B:11};
-        const semis=(idx[mTruePc]??9)+(oct-4)*12;
-        const freq=440*Math.pow(2,(semis-9)/12);
-        const osc=ctx.createOscillator(); const g=ctx.createGain();
-        osc.type='sine'; osc.frequency.value=freq;
-        const t0=ctx.currentTime; g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(0.25,t0+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t0+TONE_MS/1000);
-        osc.connect(g).connect(ctx.destination); osc.start(t0); osc.stop(t0+TONE_MS/1000);
+        try{
+          await resumeCtx();
+          const ctx=getCtx();
+          const idx={C:0,Db:1,D:2,Eb:3,E:4,F:5,Gb:6,G:7,Ab:8,A:9,Bb:10,B:11};
+          const semis=(idx[mTruePc]??9)+(oct-4)*12;
+          const freq=440*Math.pow(2,(semis-9)/12);
+          const osc=ctx.createOscillator(); const g=ctx.createGain();
+          osc.type='sine'; osc.frequency.value=freq;
+          const t0=ctx.currentTime; g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(0.25,t0+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t0+TONE_MS/1000);
+          osc.connect(g).connect(ctx.destination); osc.start(t0); osc.stop(t0+TONE_MS/1000);
+        }catch(_){}
       })();
     }else{
       playSample(mNote);
@@ -1235,10 +1180,9 @@ function guessMixed(pc){
     const pct = Math.round((mCorrect/20)*1000)/10;
     alert(`Mixed Test complete — you got ${pct}%.`);
     (state.mixedTests=state.mixedTests||[]).push({time:Date.now(), n:20, ok:mCorrect});
-    save(); try{ drawChart(); }catch(_){ }
-    text('mixedStatus','Finished — start again to add a new point');
+    save(); drawChart(); text('mixedStatus','Finished — start again to add a new point');
   }else{
-    setTimeout(()=> nextMixedTrial(true), 400);
+    setTimeout(()=> nextMixedTrial(), 400);
   }
 }
 
